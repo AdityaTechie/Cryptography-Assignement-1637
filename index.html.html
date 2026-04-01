@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cipher Studio Pro</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: white;
+}
+
+/* NAVBAR */
+.nav {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    padding: 20px;
+}
+
+.nav button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    background: #00c6ff;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.nav button:hover {
+    transform: scale(1.05);
+}
+
+/* PANELS */
+.panel {
+    display: none;
+    max-width: 420px;
+    margin: auto;
+    background: rgba(255,255,255,0.08);
+    padding: 30px;
+    border-radius: 15px;
+    backdrop-filter: blur(15px);
+    text-align: center;
+}
+
+.active {
+    display: block;
+}
+
+input, textarea {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: none;
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+button.action {
+    width: 48%;
+    padding: 10px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.encrypt { background: #00eaff; color: black; }
+.decrypt { background: #ff4b5c; color: white; }
+
+.result {
+    margin-top: 15px;
+    padding: 10px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 8px;
+    min-height: 40px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="nav">
+    <button onclick="showPanel('caesar')">Caesar Cipher</button>
+    <button onclick="showPanel('rail')">Rail Fence</button>
+    <button onclick="showPanel('sha')">SHA-512</button>
+</div>
+
+<!-- CAESAR -->
+<div id="caesar" class="panel active">
+    <h2>Caesar Cipher</h2>
+    <input id="cText" placeholder="Enter text">
+    <input id="cKey" type="number" placeholder="Enter key">
+    <div>
+        <button class="action encrypt" onclick="runCaesar('enc')">Encrypt</button>
+        <button class="action decrypt" onclick="runCaesar('dec')">Decrypt</button>
+    </div>
+    <div id="cOut" class="result"></div>
+</div>
+
+<!-- RAIL FENCE -->
+<div id="rail" class="panel">
+    <h2>Rail Fence Cipher</h2>
+    <input id="rText" placeholder="Enter text">
+    <input id="rails" type="number" placeholder="Enter rails">
+    <div>
+        <button class="action encrypt" onclick="runRail('enc')">Encrypt</button>
+        <button class="action decrypt" onclick="runRail('dec')">Decrypt</button>
+    </div>
+    <div id="rOut" class="result"></div>
+</div>
+
+<!-- SHA -->
+<div id="sha" class="panel">
+    <h2>SHA-512 Hash</h2>
+    <textarea id="sText" placeholder="Enter text"></textarea>
+    <button class="action encrypt" onclick="runSHA()">Generate Hash</button>
+    <div id="sOut" class="result"></div>
+</div>
+
+<script>
+
+/* SWITCH PANEL */
+function showPanel(id){
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+/* CAESAR */
+function caesar(str, key){
+    return str.split('').map(ch=>{
+        if(/[a-z]/i.test(ch)){
+            let base = ch === ch.toUpperCase()?65:97;
+            return String.fromCharCode((ch.charCodeAt(0)-base+key+26)%26+base);
+        }
+        return ch;
+    }).join('');
+}
+
+function runCaesar(type){
+    let text = cText.value;
+    let key = parseInt(cKey.value);
+    if(!text || isNaN(key)) return cOut.innerText="Enter valid input!";
+    if(type==='dec') key = -key;
+    cOut.innerText = caesar(text,key);
+}
+
+/* RAIL FENCE */
+function railEncrypt(text, rails){
+    let arr = Array.from({length: rails}, ()=>"");
+    let row=0, dir=1;
+
+    for(let ch of text){
+        arr[row]+=ch;
+        if(row==0) dir=1;
+        else if(row==rails-1) dir=-1;
+        row+=dir;
+    }
+    return arr.join("");
+}
+
+function railDecrypt(text, rails){
+    let pattern=[], row=0, dir=1;
+
+    for(let i=0;i<text.length;i++){
+        pattern.push(row);
+        if(row==0) dir=1;
+        else if(row==rails-1) dir=-1;
+        row+=dir;
+    }
+
+    let result = new Array(text.length);
+    let index=0;
+
+    for(let r=0;r<rails;r++){
+        for(let i=0;i<pattern.length;i++){
+            if(pattern[i]==r){
+                result[i]=text[index++];
+            }
+        }
+    }
+    return result.join("");
+}
+
+function runRail(type){
+    let text=rText.value;
+    let rails=parseInt(document.getElementById("rails").value);
+    if(!text || rails<2) return rOut.innerText="Invalid input!";
+    rOut.innerText = (type==='enc') ? railEncrypt(text,rails) : railDecrypt(text,rails);
+}
+
+/* SHA-512 */
+async function runSHA(){
+    let text = sText.value;
+    if(!text) return sOut.innerText="Enter text!";
+    let buffer = new TextEncoder().encode(text);
+    let hash = await crypto.subtle.digest("SHA-512", buffer);
+    let hex = [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
+    sOut.innerText = hex;
+}
+
+</script>
+
+</body>
+</html>
